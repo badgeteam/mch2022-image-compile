@@ -55,7 +55,7 @@ sponsorapp:
 
 appfs: sponsorapp
 	$(SOURCE_FW_IDF) &&	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBIN,$(APPFS_PARTITION))
-	$(SOURCE_FW_IDF) &&	python $(APPFS_ADD_PY) $(call BUILDBIN,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsorapp "Sponsor Slideshow" 1
+	$(SOURCE_FW_IDF) &&	python $(APPFS_ADD_PY) $(call BUILDBIN,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
 
 fatfs:
 	mkdir -p $(BUILD_DIR)
