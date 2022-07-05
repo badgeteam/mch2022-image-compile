@@ -52,10 +52,9 @@ may be convenient in certain situations.
 
 # Performance
 
-The ESP32 WROVER module can use flash mode `qio` for fastest memory access.
-However, this does not seem to be a bottleneck. Choosing a good baud rate is
-the most important factor. During testing, a speed of around 2Mbit/s was the
-fastest transfer rate before running into communication errors. 
+Choosing a good baud rate is an important factor for fast flashing. During
+testing, a speed of around 2Mbit/s was the fastest transfer rate before
+running into communication errors. 
 
 ## Approximate times
 

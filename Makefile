@@ -85,7 +85,7 @@ phyinitdata: firmware $(PHYINITDATA_FILENAME)
 
 flashargs: bootloader partitiontable main otadata phyinitdata appfs fatfs  
 	mkdir -p $(BUILD_DIR)
-	@echo "--flash_mode qio --flash_freq 80m --flash_size 16MB" > $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "--flash_mode dio --flash_freq 80m --flash_size 16MB" > $(BUILD_DIR)/$(FLASHARGS_FILE)
 	@echo "$(BOOTLOADER_ADDRESS) $(call BUILDBINNAME,bootloader)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
 	@echo "$(PARTITIONTABLE_ADDRESS) $(call BUILDBINNAME,partitiontable)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
 	@echo "$(call PARTITION_OFFSET,$(MAIN_PARTITION)) $(call BUILDBINNAME,$(MAIN_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
@@ -98,8 +98,8 @@ flashargs: bootloader partitiontable main otadata phyinitdata appfs fatfs
 	@echo "All programming data is collected in $(BUILD_DIR)/ directory."
 	@echo "This directory can be copied to other places or machines."
 	@echo "To flash, setup ESP IDF environment and call:"
-	@echo "cd $(BUILD_DIR) && esptool.py --chip ESP32 --port <port> --baud write_flash @$(FLASHARGS_FILE)"
-	@echo "To make a full factory reset including NVS erase, add -e"
+	@echo "cd $(BUILD_DIR) && esptool.py --chip ESP32 --port <port> --baud <baudrate> write_flash @$(FLASHARGS_FILE)"
+	@echo "To make a full factory reset including NVS erase, use write_flash -e instead of write_flash"
 	@echo "-------------------------------------------------------------"
 
 singlebin: flashargs
@@ -107,7 +107,7 @@ singlebin: flashargs
 	@echo "-------------------------------------------------------------"
 	@echo "Images have been merged to a single file $(BUILD_DIR)/singlebin.bin."
 	@echo "To flash, setup ESP IDF environment and call:"
-	@echo "cd $(BUILD_DIR) && esptool.py --chip ESP32 --port <port> --baud <baudrate> write_flash 0x0 singlebin.bin"
+	@echo "cd $(BUILD_DIR) && esptool.py --chip ESP32 --port <port> --baud <baudrate> write_flash --flash_mode dio --flash_freq 80m --flash_size 16MB 0x0 singlebin.bin"
 	@echo "-------------------------------------------------------------"
 
 clean:
