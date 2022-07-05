@@ -37,13 +37,14 @@ FATGEN_PY = esp-idf/components/fatfs/wl_fatfsgen.py
 PARTINFO_PY = esp-idf/components/partition_table/parttool.py
 
 # utility macros
-PARTITION_OFFSET = $$($(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info offset)
-PARTITION_SIZE = $$($(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info size)
+PARTITION_OFFSET = $$($(SOURCE_FW_IDF) && $(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info offset)
+PARTITION_SIZE = $$($(SOURCE_FW_IDF) && $(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info size)
 SOURCE_FW_IDF = source "$(FIRMWARE_IDF_PATH)/export.sh" > /dev/null
-BUILDBIN = $(BUILD_DIR)/$(1).bin
+BUILDBINNAME = $(1).bin
+BUILDBINPATH = $(BUILD_DIR)/$(1).bin
 DECIMAL = $$(printf "%d" $(1))
 
-.PHONY: firmware sponsorapp appfs fatfs bootloader partitiontable main otadata phyinitdata flashargs clean
+.PHONY: firmware sponsorapp appfs fatfs bootloader partitiontable main otadata phyinitdata flashargs singlebin clean 
 
 all: flashargs
 
@@ -54,43 +55,53 @@ sponsorapp:
 	$(SOURCE_FW_IDF) &&	cd $(SPONSORAPP_MAKE_PATH) && idf.py build
 
 appfs: sponsorapp
-	$(SOURCE_FW_IDF) &&	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBIN,$(APPFS_PARTITION))
-	$(SOURCE_FW_IDF) &&	python $(APPFS_ADD_PY) $(call BUILDBIN,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
+	$(SOURCE_FW_IDF) &&	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBINPATH,$(APPFS_PARTITION))
+	$(SOURCE_FW_IDF) &&	python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
 
 fatfs:
 	mkdir -p $(BUILD_DIR)
-	$(SOURCE_FW_IDF) && $(FATGEN_PY) $(FATFS_GEN_FLAGS) --partition_size $(call PARTITION_SIZE,$(FATFS_PARTITION)) --output_file $(call BUILDBIN,$(FATFS_PARTITION)) $(FATFS_CONTENTS_PATH)
+	$(SOURCE_FW_IDF) && $(FATGEN_PY) $(FATFS_GEN_FLAGS) --partition_size $(call PARTITION_SIZE,$(FATFS_PARTITION)) --output_file $(call BUILDBINPATH,$(FATFS_PARTITION)) $(FATFS_CONTENTS_PATH)
 
 bootloader: firmware $(BOOTLOADER_FILENAME)
-	cp $(BOOTLOADER_FILENAME) $(call BUILDBIN,bootloader)
+	cp $(BOOTLOADER_FILENAME) $(call BUILDBINPATH,bootloader)
 
 partitiontable: firmware $(PARTITIONTABLE_FILENAME)
-	cp $(PARTITIONTABLE_FILENAME) $(call BUILDBIN,partitiontable)
+	cp $(PARTITIONTABLE_FILENAME) $(call BUILDBINPATH,partitiontable)
 
 main: firmware $(MAIN_FILENAME)
-	cp $(MAIN_FILENAME) $(call BUILDBIN,$(MAIN_PARTITION))
+	cp $(MAIN_FILENAME) $(call BUILDBINPATH,$(MAIN_PARTITION))
 
 otadata: firmware $(OTADATA_FILENAME)
-	cp $(OTADATA_FILENAME) $(call BUILDBIN,$(OTADATA_PARTITION))
+	cp $(OTADATA_FILENAME) $(call BUILDBINPATH,$(OTADATA_PARTITION))
 
 phyinitdata: firmware $(PHYINITDATA_FILENAME)
-	cp $(PHYINITDATA_FILENAME) $(call BUILDBIN,$(PHYINITDATA_PARTITION))
+	cp $(PHYINITDATA_FILENAME) $(call BUILDBINPATH,$(PHYINITDATA_PARTITION))
 
 flashargs: bootloader partitiontable main otadata phyinitdata appfs fatfs  
-	@echo "--flash_mode dio --flash_freq 80m --flash_size 16MB" > $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(BOOTLOADER_ADDRESS) $(call BUILDBIN,bootloader)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(PARTITIONTABLE_ADDRESS) $(call BUILDBIN,partitiontable)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(call PARTITION_OFFSET,$(MAIN_PARTITION)) $(call BUILDBIN,$(MAIN_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(call PARTITION_OFFSET,$(OTADATA_PARTITION)) $(call BUILDBIN,$(OTADATA_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(call PARTITION_OFFSET,$(PHYINITDATA_PARTITION)) $(call BUILDBIN,$(PHYINITDATA_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(call PARTITION_OFFSET,$(APPFS_PARTITION)) $(call BUILDBIN,$(APPFS_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
-	@echo "$(call PARTITION_OFFSET,$(FATFS_PARTITION)) $(call BUILDBIN,$(FATFS_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "--flash_mode qio --flash_freq 80m --flash_size 16MB" > $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(BOOTLOADER_ADDRESS) $(call BUILDBINNAME,bootloader)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(PARTITIONTABLE_ADDRESS) $(call BUILDBINNAME,partitiontable)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(call PARTITION_OFFSET,$(MAIN_PARTITION)) $(call BUILDBINNAME,$(MAIN_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(call PARTITION_OFFSET,$(OTADATA_PARTITION)) $(call BUILDBINNAME,$(OTADATA_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(call PARTITION_OFFSET,$(PHYINITDATA_PARTITION)) $(call BUILDBINNAME,$(PHYINITDATA_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(call PARTITION_OFFSET,$(APPFS_PARTITION)) $(call BUILDBINNAME,$(APPFS_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
+	@echo "$(call PARTITION_OFFSET,$(FATFS_PARTITION)) $(call BUILDBINNAME,$(FATFS_PARTITION))" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
 	@echo ""
-	@echo "---------------------------------------------------"
-	@echo "Flash data is collected in $(BUILD_DIR)/ directory."
-	@echo "To flash, call:"
-	@echo "esptool.py -p <port> -b <baudrate> write_flash @$(BUILD_DIR)/$(FLASHARGS_FILE)"
-	@echo "---------------------------------------------------"
+	@echo "-------------------------------------------------------------"
+	@echo "All programming data is collected in $(BUILD_DIR)/ directory."
+	@echo "This directory can be copied to other places or machines."
+	@echo "To flash, setup ESP IDF environment and call:"
+	@echo "cd $(BUILD_DIR) && esptool.py --chip ESP32 --port <port> --baud write_flash @$(FLASHARGS_FILE)"
+	@echo "To make a full factory reset including NVS erase, add -e"
+	@echo "-------------------------------------------------------------"
+
+singlebin: flashargs
+	$(SOURCE_FW_IDF) && cd $(BUILD_DIR) && esptool.py --chip ESP32 merge_bin -o singlebin.bin @flashargs
+	@echo "-------------------------------------------------------------"
+	@echo "Images have been merged to a single file $(BUILD_DIR)/singlebin.bin."
+	@echo "To flash, setup ESP IDF environment and call:"
+	@echo "cd $(BUILD_DIR) && esptool.py --chip ESP32 --port <port> --baud <baudrate> write_flash 0x0 singlebin.bin"
+	@echo "-------------------------------------------------------------"
 
 clean:
 	-rm -f $(BUILD_DIR)/* 

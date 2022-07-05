@@ -24,9 +24,23 @@ The whole process is done in the Makefile. It will:
 
 - Clone this repo
 - initialize submodules: ```git submodule update --init --recursive```
-- Copy files that should go into the FatFS partition into the ```fatfs-contents```directory, remove the placeholder
+- Copy files that should go into the FatFS partition into the ```fatfs-contents``` directory, remove the placeholder file.
 - run ```make```
 - The esptool.py arguments to use will be printed when make is done.
+
+# Single bin operation
+
+The default procedure will collect several binary blobs and generate a script to flash them all individually. Alternatively, you can run ```make singlebin```, which will merge all binary blobs into a single image file to flash to address 0x0. This may be slightly slower to flash, but a single file may be convenient in certain situations.
+
+# Performance
+
+The ESP32 WROVER module can use flash mode qio for fastest memory access. However, this does not seem to be a bottleneck. Choosing a good Serial speed is the most important factor. During testing here, a speed of around 2Mbit/s was the fastest option without running into communication errors. 
+
+## Approximate times
+
+- Flash individual bins without -e (full erase) option: 80s
+- Flash individual bins with -e (full erase) option: 85s
+- Flash single bin (implies full erase): 85s
 
 
 
