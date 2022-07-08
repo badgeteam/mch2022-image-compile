@@ -74,9 +74,9 @@ appfs: sponsorapp
 	@echo ">>> Generating AppFS"
 	mkdir -p $(BUILD_DIR)
 	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBINPATH,$(APPFS_PARTITION))
-	@while IFS="," read -r app_name slug filename; do \
+	@while IFS="," read -r app_name slug filename version; do \
 	  echo "Adding $${filename} to AppFS as '$${app_name}' / '$${slug}'"; \
-	  python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(APPFS_DIR)/$${filename} $${slug} "$${app_name}" 1; \
+	  python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(APPFS_DIR)/$${filename} $${slug} "$${app_name}" $${version}; \
     done < <(tail -n +2 appfs-contents/applist.csv)
 
 fatfs:
