@@ -55,9 +55,15 @@ DECIMAL = $$(printf "%d" $(1))
 
 all: flashargs
 
+prepare:
+	@echo ">>> Cloning submodules and preparing firmware builder"
+	git submodule update --init
+	cd mch2022-sponsors-slideshow && git -c submodule.esp-idf.update=none submodule update --init --recursive
+	cd $(FIRMWARE_REPO_PATH) && make prepare
+
 firmware:
 	@echo ">>> Building firmware"
-	cd $(FIRMWARE_REPO_PATH) && make prepare && make build
+	cd $(FIRMWARE_REPO_PATH) && make build
 
 sponsorapp:
 	@echo ">>> Building sponsor app"

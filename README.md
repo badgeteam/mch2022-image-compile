@@ -36,10 +36,11 @@ submodule)
 # How to use
 
 - Clone this repo
-- Update submodules: ```git submodule update --init --recursive```
+- Update submodules and install ESP-IDF dependencies: `make prepare`
 - Make sure you have checked out the correct versions of the firmware and slideshow submodules (see using ```git submodule```)
 - Copy files that should go into the FatFS partition into the
   ```fatfs-contents``` directory, remove the placeholder file.
+- Copy apps that should be included on the AppFS to `appfs-contents` and add their info to `applist.csv`
 - run ```make```
 - The arguments to `esptool.py` will be printed when make is done.
 
@@ -62,8 +63,3 @@ running into communication errors.
 - Flash individual bins without -e (full erase) option: 80s
 - Flash individual bins with -e (full erase) option: 85s
 - Flash single bin (implies full erase): 85s
-
-
-
-
-
