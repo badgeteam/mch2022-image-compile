@@ -1,2 +1,4 @@
 build/
+appfs-contents/*
+!appfs-contents/applist.csv
 .DS_Store

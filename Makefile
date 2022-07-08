@@ -13,6 +13,7 @@ FATFS_GEN_FLAGS = --long_name_support --sector_size 4096
 
 #appfs will be generated here, goes to partition
 APPFS_PARTITION = appfs
+APPFS_DIR = appfs-contents
 APPFS_GEN_PY = $(FIRMWARE_REPO_PATH)/components/appfs/tools/appfs_generate.py
 APPFS_ADD_PY = $(FIRMWARE_REPO_PATH)/components/appfs/tools/appfs_add_file.py
 SPONSORAPP_BUILD_PATH = $(SPONSORAPP_MAKE_PATH)/build
@@ -61,12 +62,16 @@ firmware:
 sponsorapp:
 	@echo ">>> Building sponsor app"
 	$(SOURCE_FW_IDF) && cd $(SPONSORAPP_MAKE_PATH) && idf.py build
+	cp $(SPONSORAPP_BIN) $(APPFS_DIR)/sponsor_slideshow.bin
 
 appfs: sponsorapp
 	@echo ">>> Generating AppFS"
 	mkdir -p $(BUILD_DIR)
 	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBINPATH,$(APPFS_PARTITION))
-	python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
+	@while IFS="," read -r app_name slug filename; do \
+	  echo "Adding $${filename} to AppFS as '$${app_name}' / '$${slug}'"; \
+	  python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(APPFS_DIR)/$${filename} $${slug} "$${app_name}" 1; \
+    done < <(tail -n +2 appfs-contents/applist.csv)
 
 fatfs:
 	@echo ">>> Generating FatFS"
@@ -133,3 +138,4 @@ clean:
 cleanall: clean
 	-rm -rf $(FIRMWARE_BUILD_PATH)/*
 	-rm -rf $(SPONSORAPP_BUILD_PATH)/*
+	-rm -f $(APPFS_DIR)/sponsor_slideshow.bin
