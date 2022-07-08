@@ -1,5 +1,8 @@
+SHELL := /bin/bash
+PWD := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
 BUILD_DIR ?= build
-FIRMWARE_REPO_PATH = mch2022-firmware-esp32
+FIRMWARE_REPO_PATH = $(PWD)mch2022-firmware-esp32
 FIRMWARE_BUILD_PATH = $(FIRMWARE_REPO_PATH)/build
 FLASHARGS_FILE = flashargs
 
@@ -12,9 +15,10 @@ FATFS_GEN_FLAGS = --long_name_support --sector_size 4096
 APPFS_PARTITION = appfs
 APPFS_GEN_PY = $(FIRMWARE_REPO_PATH)/components/appfs/tools/appfs_generate.py
 APPFS_ADD_PY = $(FIRMWARE_REPO_PATH)/components/appfs/tools/appfs_add_file.py
-SPONSORAPP_MAKE_PATH = mch2022-sponsors-slideshow/app
-SPONSORAPP_PATH = mch2022-sponsors-slideshow/
-SPONSORAPP_BIN = mch2022-sponsors-slideshow/app/build/main.bin
+SPONSORAPP_BUILD_PATH = $(SPONSORAPP_MAKE_PATH)/build
+SPONSORAPP_MAKE_PATH = $(SPONSORAPP_PATH)/app
+SPONSORAPP_PATH = $(PWD)mch2022-sponsors-slideshow
+SPONSORAPP_BIN = $(SPONSORAPP_BUILD_PATH)/main.bin
 
 # firmware-generated images that go to partitions
 MAIN_FILENAME = $(FIRMWARE_BUILD_PATH)/main.bin
@@ -30,16 +34,18 @@ BOOTLOADER_ADDRESS = 0x1000
 PARTITIONTABLE_FILENAME = $(FIRMWARE_BUILD_PATH)/partition_table/partition-table.bin
 PARTITIONTABLE_ADDRESS = 0x8000
 
-# other needed paths and scripts 
+# other needed paths and scripts
+IDF_PATH = $(PWD)esp-idf
 FIRMWARE_IDF_PATH = $(FIRMWARE_REPO_PATH)/esp-idf
 PATITION_TABLE_PATH = $(FIRMWARE_REPO_PATH)/partitions.csv
-FATGEN_PY = esp-idf/components/fatfs/wl_fatfsgen.py
-PARTINFO_PY = esp-idf/components/partition_table/parttool.py
+FATGEN_PY = $(IDF_PATH)/components/fatfs/wl_fatfsgen.py
+PARTINFO_PY = $(IDF_PATH)/components/partition_table/parttool.py
 
 # utility macros
 PARTITION_OFFSET = $$($(SOURCE_FW_IDF) && $(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info offset)
 PARTITION_SIZE = $$($(SOURCE_FW_IDF) && $(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info size)
-SOURCE_FW_IDF = . "$(FIRMWARE_IDF_PATH)/export.sh" > /dev/null 2>/dev/null
+SOURCE_FW_IDF = . $(FIRMWARE_IDF_PATH)/export.sh > /dev/null
+SOURCE_IDF   = . $(IDF_PATH)/export.sh > /dev/null
 BUILDBINNAME = $(1).bin
 BUILDBINPATH = $(BUILD_DIR)/$(1).bin
 DECIMAL = $$(printf "%d" $(1))
@@ -54,13 +60,13 @@ firmware:
 
 sponsorapp:
 	@echo ">>> Building sponsor app"
-	$(SOURCE_FW_IDF) &&	cd $(SPONSORAPP_MAKE_PATH) && idf.py build
+	$(SOURCE_FW_IDF) && cd $(SPONSORAPP_MAKE_PATH) && idf.py build
 
 appfs: sponsorapp
 	@echo ">>> Generating AppFS"
 	mkdir -p $(BUILD_DIR)
-	$(SOURCE_FW_IDF) &&	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBINPATH,$(APPFS_PARTITION))
-	$(SOURCE_FW_IDF) &&	python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
+	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBINPATH,$(APPFS_PARTITION))
+	python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
 
 fatfs:
 	@echo ">>> Generating FatFS"
@@ -92,7 +98,7 @@ phyinitdata: firmware $(PHYINITDATA_FILENAME)
 	mkdir -p $(BUILD_DIR)
 	cp $(PHYINITDATA_FILENAME) $(call BUILDBINPATH,$(PHYINITDATA_PARTITION))
 
-flashargs: bootloader partitiontable main otadata phyinitdata appfs fatfs  
+flashargs: clean bootloader partitiontable main otadata phyinitdata appfs fatfs
 	@echo ">>> Generating flashargs"
 	mkdir -p $(BUILD_DIR)
 	@echo "--flash_mode dio --flash_freq 80m --flash_size 16MB" > $(BUILD_DIR)/$(FLASHARGS_FILE)
@@ -122,5 +128,8 @@ singlebin: flashargs
 	@echo "-------------------------------------------------------------"
 
 clean:
-	-rm -f $(BUILD_DIR)/* 
+	-rm -f $(BUILD_DIR)/*
 
+cleanall: clean
+	-rm -rf $(FIRMWARE_BUILD_PATH)/*
+	-rm -rf $(SPONSORAPP_BUILD_PATH)/*
