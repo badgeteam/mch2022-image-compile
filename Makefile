@@ -39,7 +39,7 @@ PARTINFO_PY = esp-idf/components/partition_table/parttool.py
 # utility macros
 PARTITION_OFFSET = $$($(SOURCE_FW_IDF) && $(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info offset)
 PARTITION_SIZE = $$($(SOURCE_FW_IDF) && $(PARTINFO_PY) -f $(PATITION_TABLE_PATH) get_partition_info --partition-name $(1) --info size)
-SOURCE_FW_IDF = . "$(FIRMWARE_IDF_PATH)/export.sh" > /dev/null
+SOURCE_FW_IDF = . "$(FIRMWARE_IDF_PATH)/export.sh" > /dev/null 2>/dev/null
 BUILDBINNAME = $(1).bin
 BUILDBINPATH = $(BUILD_DIR)/$(1).bin
 DECIMAL = $$(printf "%d" $(1))
@@ -49,41 +49,51 @@ DECIMAL = $$(printf "%d" $(1))
 all: flashargs
 
 firmware:
+	@echo ">>> Building firmware"
 	cd $(FIRMWARE_REPO_PATH) && make prepare && make build
 
 sponsorapp:
+	@echo ">>> Building sponsor app"
 	$(SOURCE_FW_IDF) &&	cd $(SPONSORAPP_MAKE_PATH) && idf.py build
 
 appfs: sponsorapp
+	@echo ">>> Generating AppFS"
 	mkdir -p $(BUILD_DIR)
 	$(SOURCE_FW_IDF) &&	python $(APPFS_GEN_PY) $(call DECIMAL,$(call PARTITION_SIZE,$(APPFS_PARTITION))) $(call BUILDBINPATH,$(APPFS_PARTITION))
 	$(SOURCE_FW_IDF) &&	python $(APPFS_ADD_PY) $(call BUILDBINPATH,$(APPFS_PARTITION)) $(SPONSORAPP_BIN) sponsors "Sponsor Slideshow" 1
 
 fatfs:
+	@echo ">>> Generating FatFS"
 	mkdir -p $(BUILD_DIR)
 	$(SOURCE_FW_IDF) && $(FATGEN_PY) $(FATFS_GEN_FLAGS) --partition_size $(call PARTITION_SIZE,$(FATFS_PARTITION)) --output_file $(call BUILDBINPATH,$(FATFS_PARTITION)) $(FATFS_CONTENTS_PATH)
 
 bootloader: firmware $(BOOTLOADER_FILENAME)
+	@echo ">>> Assembling bootloader"
 	mkdir -p $(BUILD_DIR)
 	cp $(BOOTLOADER_FILENAME) $(call BUILDBINPATH,bootloader)
 
 partitiontable: firmware $(PARTITIONTABLE_FILENAME)
+	@echo ">>> Assembling partition table"
 	mkdir -p $(BUILD_DIR)
 	cp $(PARTITIONTABLE_FILENAME) $(call BUILDBINPATH,partitiontable)
 
 main: firmware $(MAIN_FILENAME)
+	@echo ">>> Assembling firmware partition"
 	mkdir -p $(BUILD_DIR)
 	cp $(MAIN_FILENAME) $(call BUILDBINPATH,$(MAIN_PARTITION))
 
 otadata: firmware $(OTADATA_FILENAME)
+	@echo ">>> Assembling otadata partition"
 	mkdir -p $(BUILD_DIR)
 	cp $(OTADATA_FILENAME) $(call BUILDBINPATH,$(OTADATA_PARTITION))
 
 phyinitdata: firmware $(PHYINITDATA_FILENAME)
+	@echo ">>> Assembling PHY init data partition"
 	mkdir -p $(BUILD_DIR)
 	cp $(PHYINITDATA_FILENAME) $(call BUILDBINPATH,$(PHYINITDATA_PARTITION))
 
 flashargs: bootloader partitiontable main otadata phyinitdata appfs fatfs  
+	@echo ">>> Generating flashargs"
 	mkdir -p $(BUILD_DIR)
 	@echo "--flash_mode dio --flash_freq 80m --flash_size 16MB" > $(BUILD_DIR)/$(FLASHARGS_FILE)
 	@echo "$(BOOTLOADER_ADDRESS) $(call BUILDBINNAME,bootloader)" >> $(BUILD_DIR)/$(FLASHARGS_FILE)
@@ -103,6 +113,7 @@ flashargs: bootloader partitiontable main otadata phyinitdata appfs fatfs
 	@echo "-------------------------------------------------------------"
 
 singlebin: flashargs
+	@echo ">>> Merging binaries into single blob"
 	$(SOURCE_FW_IDF) && cd $(BUILD_DIR) && esptool.py --chip ESP32 merge_bin -o singlebin.bin @flashargs
 	@echo "-------------------------------------------------------------"
 	@echo "Images have been merged to a single file $(BUILD_DIR)/singlebin.bin."

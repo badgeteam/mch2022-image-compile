@@ -36,7 +36,8 @@ submodule)
 # How to use
 
 - Clone this repo
-- initialize submodules: ```git submodule update --init --recursive```
+- Update submodules: ```git submodule update --init --recursive```
+- Make sure you have checked out the correct versions of the firmware and slideshow submodules (see using ```git submodule```)
 - Copy files that should go into the FatFS partition into the
   ```fatfs-contents``` directory, remove the placeholder file.
 - run ```make```
